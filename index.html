@@ -901,10 +901,12 @@ async function loadShifts() {
     try {
         const response = await fetch(API_URL);
         const shifts = await response.json();
+        localStorage.setItem("shifts", JSON.stringify(shifts)); // 🔹 Сохраняем в localStorage
         renderShifts(shifts);
     } catch (error) {
-        console.error("❌ Ошибка загрузки смен:", error);
-        renderShifts([]); // Если сервер недоступен
+        console.error("❌ Сервер недоступен, загружаем смены из localStorage.");
+        const localShifts = JSON.parse(localStorage.getItem("shifts")) || [];
+        renderShifts(localShifts);
     }
 }
 
