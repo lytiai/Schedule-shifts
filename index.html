@@ -895,6 +895,61 @@ function saveShiftsToLocalStorage() {
     document.getElementById('shiftForm').reset();
     
 }
+const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
+
+async function loadShifts() {
+    try {
+        const response = await fetch(API_URL);
+        const shifts = await response.json();
+        localStorage.setItem("shifts", JSON.stringify(shifts)); // Кэшируем в localStorage
+        renderShifts(); // Функция, которая обновляет интерфейс
+    } catch (error) {
+        console.error("Ошибка загрузки смен:", error);
+    }
+}
+
+// Загружаем смены при загрузке страницы
+document.addEventListener("DOMContentLoaded", loadShifts);
+
+async function addShift(date, shiftType) {
+    const newShift = { date, shift: shiftType };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newShift),
+        });
+
+        if (response.ok) {
+            console.log("✅ Смена добавлена!");
+            loadShifts(); // Перезагружаем список смен
+        } else {
+            console.error("❌ Ошибка при добавлении смены:", await response.text());
+        }
+    } catch (error) {
+        console.error("❌ Ошибка связи с сервером:", error);
+    }
+}
+	  async function deleteShift(shiftId) {
+    try {
+        const response = await fetch(`${API_URL}/${shiftId}`, {
+            method: "DELETE",
+        });
+
+        if (response.ok) {
+            console.log("✅ Смена удалена!");
+            loadShifts(); // Перезагружаем список смен
+        } else {
+            console.error("❌ Ошибка при удалении смены:", await response.text());
+        }
+    } catch (error) {
+        console.error("❌ Ошибка связи с сервером:", error);
+    }
+}
+
+
+	  
     // Для удобства: сколько часов в каждом типе смены
     function computeHours(shiftType) {
       switch (shiftType) {
