@@ -885,8 +885,7 @@ thead {
   });
 });
 
- 
-    
+ // смены сохранить
 function saveShiftsToLocalStorage() {
     // Сохраняем смены в локальное хранилище
     localStorage.setItem("shifts", JSON.stringify(shifts));
@@ -894,25 +893,50 @@ function saveShiftsToLocalStorage() {
     renderShiftsTable();
     document.getElementById('shiftForm').reset();
     
-}
-const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
+}const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
 
+// 🔹 Сохранение смен в localStorage
+function saveShiftsLocally(shifts) {
+    localStorage.setItem("shifts", JSON.stringify(shifts));
+}
+
+// 🔹 Загрузка смен из localStorage
+function loadShiftsFromLocalStorage() {
+    const storedShifts = localStorage.getItem("shifts");
+    return storedShifts ? JSON.parse(storedShifts) : [];
+}
+
+// 🔹 Получение смен с сервера + из localStorage
 async function loadShifts() {
     try {
         const response = await fetch(API_URL);
-        const shifts = await response.json();
-        localStorage.setItem("shifts", JSON.stringify(shifts)); // Кэшируем в localStorage
-        renderShifts(); // Функция, которая обновляет интерфейс
+        const serverShifts = await response.json();
+        
+        // Объединяем серверные смены с локальными
+        let localShifts = loadShiftsFromLocalStorage();
+        let mergedShifts = [...serverShifts, ...localShifts];
+
+        // Убираем дубликаты по дате и типу
+        mergedShifts = mergedShifts.filter((shift, index, self) =>
+            index === self.findIndex(s => s.date === shift.date && s.shift === shift.shift)
+        );
+
+        saveShiftsLocally(mergedShifts); // Обновляем localStorage
+        renderShifts(mergedShifts); // Отрисовываем на странице
+
     } catch (error) {
-        console.error("Ошибка загрузки смен:", error);
+        console.error("❌ Ошибка загрузки с сервера, используем локальные данные", error);
+        renderShifts(loadShiftsFromLocalStorage()); // Показываем локальные смены
     }
 }
 
-// Загружаем смены при загрузке страницы
-document.addEventListener("DOMContentLoaded", loadShifts);
-
+// 🔹 Добавление смены в localStorage и на сервер
 async function addShift(date, shiftType) {
     const newShift = { date, shift: shiftType };
+    let localShifts = loadShiftsFromLocalStorage();
+    localShifts.push(newShift);
+    saveShiftsLocally(localShifts);
+    renderShifts(localShifts); // Обновляем интерфейс
 
     try {
         const response = await fetch(API_URL, {
@@ -922,44 +946,57 @@ async function addShift(date, shiftType) {
         });
 
         if (response.ok) {
-            console.log("✅ Смена добавлена!");
-            loadShifts(); // Перезагружаем список смен
+            console.log("✅ Смена добавлена на сервер!");
         } else {
-            console.error("❌ Ошибка при добавлении смены:", await response.text());
+            console.error("❌ Ошибка при добавлении на сервер:", await response.text());
         }
     } catch (error) {
-        console.error("❌ Ошибка связи с сервером:", error);
+        console.error("❌ Сервер недоступен, смена сохранена локально.", error);
     }
 }
-	  async function deleteShift(shiftId) {
-    try {
-        const response = await fetch(`${API_URL}/${shiftId}`, {
-            method: "DELETE",
-        });
 
+// 🔹 Удаление смены
+async function deleteShift(shiftId) {
+    let localShifts = loadShiftsFromLocalStorage();
+    localShifts = localShifts.filter(shift => shift.id !== shiftId);
+    saveShiftsLocally(localShifts);
+    renderShifts(localShifts); // Обновляем страницу
+
+    try {
+        const response = await fetch(`${API_URL}/${shiftId}`, { method: "DELETE" });
         if (response.ok) {
-            console.log("✅ Смена удалена!");
-            loadShifts(); // Перезагружаем список смен
+            console.log("✅ Смена удалена с сервера!");
         } else {
             console.error("❌ Ошибка при удалении смены:", await response.text());
         }
     } catch (error) {
-        console.error("❌ Ошибка связи с сервером:", error);
+        console.error("❌ Сервер недоступен, удаляем только локально.", error);
     }
 }
 
+// 🔹 Синхронизация при подключении к интернету
+window.addEventListener("online", async () => {
+    console.log("🌍 Онлайн! Синхронизируем данные...");
+    let localShifts = loadShiftsFromLocalStorage();
 
-	  
-    // Для удобства: сколько часов в каждом типе смены
-    function computeHours(shiftType) {
-      switch (shiftType) {
-        case 'day': return 12;
-        case 'night': return 20;
-        case 'holidayDay': return 24;   // день ×2
-        case 'holidayNight': return 24; // ночь ×2
-      }
-      return 0;
+    for (const shift of localShifts) {
+        try {
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(shift),
+            });
+        } catch (error) {
+            console.error("❌ Ошибка при синхронизации:", error);
+        }
     }
+    
+    localStorage.removeItem("shifts"); // Очищаем локальный кеш после синхронизации
+    loadShifts(); // Перезагружаем данные
+});
+
+// 🔹 Запускаем загрузку смен при загрузке страницы
+document.addEventListener("DOMContentLoaded", loadShifts);
 
     // Добавление смены
     shiftForm.addEventListener('submit', e => {
@@ -987,7 +1024,6 @@ async function addShift(date, shiftType) {
 
       shifts.push(newShift);
       saveShiftsToLocalStorage();
-      updateShiftsOnGitHub(shifts); // ✅ Добавляем отправку на GitHub
       renderShiftsTable();
       shiftForm.reset();
     });
