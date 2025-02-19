@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Скачать смены</title>
+</head>
+<body>
+  <h2>Скачать файл с графиком смен</h2>
+  <p>Нажмите кнопку ниже, чтобы скачать файл:</p>
+  <button id="downloadShifts">📥 Скачать смены</button>
+  <div id="shiftList"></div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const shiftsParam = urlParams.get("shifts");
+
+      if (!shiftsParam) {
+        alert("❌ Нет смен для скачивания!");
+        return;
+      }
+
+      try {
+        const shifts = JSON.parse(decodeURIComponent(shiftsParam));
+
+        document.getElementById("downloadShifts").addEventListener("click", () => {
+          let fileContent = "📅 График смен\n\n";
+          fileContent += shifts.map(shift =>
+            `Дата: ${shift.date}\nТип: ${shift.shiftType === "night" ? "Ночная" : "Дневная"}\n---`
+          ).join("\n");
+
+          console.log("📦 Создаём файл перед скачиванием:\n", fileContent);
+
+          const blob = new Blob(["\uFEFF" + fileContent], { type: "text/plain;charset=utf-8" });
+          const fileURL = URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = fileURL;
+          a.download = "Мои_смены.txt";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          console.log("✅ Файл успешно скачан!");
+        });
+      } catch (error) {
+        alert("❌ Ошибка при обработке смен!");
+        console.error("Ошибка при разборе JSON:", error);
+      }
+    });
+  </script>
+  
+  <script>
+  document.addEventListener("DOMContentLoaded", async () => {
+      const fileUrl = "https://drive.google.com/uc?id=1C5B-zLXg_F3r3lHrQdYq4orIh3MYuR-E&export=download"; // 🔹 Вставь правильную ссылку
+
+      try {
+          const response = await fetch(fileUrl);
+          const shifts = await response.json();
+
+          console.log("✅ Смены загружены:", shifts);
+
+          // Выводим смены на страницу
+          const output = document.getElementById("shiftList");
+          output.innerHTML = "<h3>📅 График смен:</h3>";
+          shifts.forEach(shift => {
+              output.innerHTML += `<p>📅 ${shift.date} — ${shift.shiftType}</p>`;
+          });
+      } catch (error) {
+          console.error("❌ Ошибка загрузки смен:", error);
+      }
+  });
+
+
+</script>
+</body>
+</html>

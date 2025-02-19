@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>График смен</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f2f2f2;
+    }
+    header {
+      background: #4caf50;
+      color: #fff;
+      padding: 16px;
+      text-align: center;
+    }
+    main {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+    h1, h2 {
+      margin-top: 0;
+    }
+    .card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Форма добавления смен */
+    #shiftForm {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+    #shiftForm label {
+      display: flex;
+      flex-direction: column;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    #shiftForm input, #shiftForm select {
+      margin-top: 4px;
+      padding: 8px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-width: 120px;
+    }
+    #shiftForm button {
+      background: #4caf50;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #shiftForm button:hover {
+      background: #45a049;
+    }
+
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+    }
+    table {
+      min-width: 600px;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    thead {
+      background: #ddd;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .done-row td {
+      text-decoration: line-through;
+      color: #999;
+    }
+    .btn {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 4px;
+    }
+    .btn.done {
+      background: #ffc107; /* Жёлтая */
+      color: #000;
+    }
+    .btn.edit {
+      background: #2196f3;
+      color: #fff;
+    }
+    .btn.delete {
+      background: #f44336;
+      color: #fff;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none; 
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal {
+      background: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      max-width: 400px;
+      width: 100%;
+      position: relative;
+    }
+    .modal h2 {
+      margin-top: 0;
+    }
+    .modal form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .close-modal {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #333;
+    }
+
+    /* Форма расчёта зарплаты */
+	#salaryForm {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #salaryForm label {
+      font-weight: bold;
+    }
+    #salaryResult {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      display: none;
+    }
+    #salaryResult p {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 480px) {
+      #shiftForm {
+        flex-direction: column;
+      }
+      #shiftForm label, #shiftForm input, #shiftForm select, #shiftForm button {
+        width: 100%;
+      }
+      table {
+        min-width: 500px;
+      }
+    }
+
+.btn-salary {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.btn-salary:hover {
+  background: #45a049;
+}
+/* Центрируем содержимое формы расчета зарплаты */
+#salaryForm {
+  display: flex;
+  flex-direction: column; /* Элемты идут вертикально */
+  align-items: center; /* Выравнивание по центру */
+  text-align: center; /* Выравваем текст */
+}
+
+/* Уменьшаем ширину поля ввода и кнопки */
+#hourlyRate {
+  width: 50%; /* Делаем поле ввода уже */
+  min-width: 200px; /* Миниьная ширина */
+}
+
+/* Центрируем кноп и делаем ее уже */
+.btn-salary {
+  width: 25%; /* Сужаем кнопку */
+  min-width: 150px; /* Минимальная ширина */
+  padding: 8px 12px; /* Делаем кнопку компактнее */
+  font-size: 0.9rem; /* Чуть уменьшаем текст */
+}
+
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@100;200;300;400;500;600;700&display=swap');
+
+:root {
+    --calendar-bg-color: #faf8f7;
+    --calendar-font-color: #050505;
+    --weekdays-border-bottom-color: #404040;
+    --calendar-date-hover-color: #505050;
+    --calendar-current-date-color: #dbdad9;
+    --calendar-today-color: linear-gradient(to bottom, #d9d9d9, #d9d9d9);
+    --calendar-today-innerborder-color: transparent;
+    --calendar-nextprev-bg-color: transparent;
+    --next-prev-arrow-color : red;
+    --calendar-border-radius: 16px;
+    --calendar-prevnext-date-color: #d1cecd
+}
+
+* {
+    padding: 0;
+    margin: 0;
+}
+
+.calendar {
+    font-family: 'IBM Plex Sans', sans-serif;
+    position: relative;
+    max-width: 400px; /*change as per your design need */
+    min-width: 320px;
+    background: var(--calendar-bg-color);
+    color: var(--calendar-font-color);
+    margin: 20px auto;
+    box-sizing: border-box;
+    overflow: hidden;
+    font-weight: normal;
+    border-radius: var(--calendar-border-radius);
+}
+
+.calendar-inner {
+    padding: 10px 10px;
+}
+
+.calendar .calendar-inner .calendar-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    
+}
+
+.calendar .calendar-inner .calendar-body div {
+    padding: 4px;
+    min-height: 30px;
+    line-height: 30px;
+    border: 1px solid transparent;
+    margin: 10px 2px 0px;
+    
+}
+
+/* Красный текст для заголовков Сб и Вс */
+.calendar .calendar-inner .calendar-body div:nth-child(6),
+.calendar .calendar-inner .calendar-body div:nth-child(7) {
+    color: red !important;
+    
+}
+
+/* Красные цифры в колонках субботы и воскресенья */
+.calendar .calendar-inner .calendar-body div:nth-child(7n-1) a, /* Суббота */
+.calendar .calendar-inner .calendar-body div:nth-child(7n) a {  /* Воскресенье */
+    color: red !important;
+    
+}
+
+.calendar .calendar-inner .calendar-body div>a {
+    color: var(--calendar-font-color);
+    text-decoration: none;
+    display: flex;
+    justify-content: center;
+
+}
+
+.calendar .calendar-inner .calendar-body div:hover {
+    border: 1px solid var(--calendar-date-hover-color);
+    border-radius: 4px;
+    
+}
+
+.calendar .calendar-inner .calendar-body div.empty-dates:hover {
+    border: 1px solid transparent;
+    
+}
+
+.calendar .calendar-inner .calendar-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.calendar .calendar-inner .calendar-today-date {
+    display: grid;
+    text-align: center;
+    cursor: pointer;
+    margin: 3px 0px;
+    background: var(--calendar-current-date-color);
+    padding: 8px 0px;
+    border-radius: 10px;
+    width: 80%;
+    margin: auto;
+    
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-year-month {
+    display: flex;
+    min-width: 100px;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-next {
+    text-align: right;
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-year-month .calendar-year-label,
+.calendar .calendar-inner .calendar-controls .calendar-year-month .calendar-month-label {
+    font-weight: 500;
+    font-size: 20px;
+}
+
+.calendar .calendar-inner .calendar-body .calendar-today {
+    background: var(--calendar-today-color);
+    border-radius: 4px;
+    
+}
+
+.calendar .calendar-inner .calendar-body .calendar-today:hover {
+    border: 1px solid transparent;
+    
+}
+
+.calendar .calendar-inner .calendar-body .calendar-today a {
+    outline: 2px solid var(--calendar-today-innerborder-color);
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-next a,
+.calendar .calendar-inner .calendar-controls .calendar-prev a {
+    color: var(--calendar-font-color);
+    font-family: arial, consolas, sans-serif;
+    font-size: 26px;
+    text-decoration: none;
+    padding: 4px 12px;
+    display: inline-block;
+    background: var(--calendar-nextprev-bg-color);
+    margin: 10px 0 10px 0;
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-next a svg,
+.calendar .calendar-inner .calendar-controls .calendar-prev a svg {
+    height: 20px;
+    width: 20px;
+}
+
+.calendar .calendar-inner .calendar-controls .calendar-next a svg path,
+.calendar .calendar-inner .calendar-controls .calendar-prev a svg path{
+    fill: var(--next-prev-arrow-color);
+}
+
+.calendar .calendar-inner .calendar-body .prev-dates,
+.calendar .calendar-inner .calendar-body .next-dates {
+    color: var(--calendar-prevnext-date-color);
+}
+
+.calendar .calendar-inner .calendar-body .prev-dates:hover,
+.calendar .calendar-inner .calendar-body .next-dates:hover {
+  border: 1px solid transparent;
+  pointer-events: none;
+  
+}
+.shift-day {
+    background-color: rgba(0, 200, 0, 0.5);
+    border-radius: 4px;
+}
+
+.shift-night {
+    background-color: rgba(0, 0, 200, 0.5);
+    border-radius: 4px;
+    color: white;
+}
+
+.shift-holiday-day {
+    background-color: rgba(255, 165, 0, 0.5);
+    border-radius: 4px;
+}
+
+.shift-holiday-night {
+    background-color: rgba(200, 0, 0, 0.5);
+    border-radius: 4px;
+    color: white;
+}
+  </style>
+  <style>
+ @keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.bar-shifts, .bar-hours {
+  animation: pulse 1.5s infinite alternate;
+}
+ .stats-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.stats-label {
+  width: 120px;
+  font-weight: bold;
+}
+
+.stats-bar-container {
+  flex: 1;
+  height: 20px;
+  background: #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.stats-bar-fill {
+  height: 100%;
+  text-align: right;
+  line-height: 20px;
+  padding-right: 8px;
+  font-size: 0.9rem;
+  color: white;
+  font-weight: bold;
+  transition: width 0.5s ease-in-out;
+}
+
+.bar-shifts {
+  background: #4caf50; /* Зелёный */
+}
+
+.bar-hours {
+  background: #f44336; /* Красный */
+}
+
+/* Скрываем черные цифры в конце колонок статистики */
+#statsCount, #statsHours {
+  display: none;
+}
+</style>
+
+<style>
+/* Карточка для блока "Импорт графика" */
+.card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Заголовок в карточке */
+.card h2 {
+  margin-top: 0;
+  color: #050505; /* Зеленый цвет заголовка */
+  font-size: 1.5rem;
+}
+
+/* Стили для формы */
+.card form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+/* Поля ввода и выпадающий список */
+.card input,
+.card select {
+  padding: 8px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-width: 150px;
+}
+
+/* Зеленая кнопка, как у "Добавить смену" */
+.btn-import {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+/* Центрируем кнопку "Импортировать" */
+.btn-import {
+  display: block;
+  margin: 10px auto; /* Центрируем */
+  width: 25%; /* Делаем кнопку компактнее */
+  min-width: 150px; /* Минимальная ширина */
+  padding: 8px 12px; /* Делаем кнопку меньше */
+  font-size: 0.9rem; /* Уменьшаем текст */
+}
+
+.btn-import:hover {
+  background: #45a049;
+}
+/* Скрываем стандартный текст внутри input type="file" */
+input[type="file"] {
+  color: transparent;
+}
+
+/* Центрируем блоки и делаем поля компактнее */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center; /* Центрируем содержимое */
+  text-align: center;
+  width: 100%;
+}
+
+/* Уменьшаем ширину полей */
+.input-group input,
+.input-group select {
+  width: 50%; /* Уменьшаем ширину */
+  min-width: 200px; /* Минимальная ширина */
+  padding: 6px 10px; /* Делаем поля компактнее */
+  font-size: 0.9rem; /* Уменьшаем шрифт */
+}
+.btn-share {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  margin: 10px auto;
+}
+
+.btn-share:hover {
+  background: #1976d2;
+}
+
+#qr-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+#preview {
+  display: block;
+  max-width: 100%;
+  margin: 15px auto;
+  border: 1px solid #ccc;
+}
+#qr-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+#qr-container canvas {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+<style>
+/* Контейнер таблицы */
+#shiftTableContainer {
+  margin-top: 10px;
+  padding: 0; /* Убираем отступы */
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+  border-radius: 5px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease-in-out, padding 0.3s ease-in-out;
+}
+
+/* Открытое состояние */
+#shiftTableContainer.open {
+  max-height: 500px; /* Достаточно для нескольких смен */
+  padding: 10px;
+}
+
+/* Адаптивность */
+.table-responsive {
+  width: 100%;
+  max-height: 400px; /* Вертикальный скролл */
+  overflow-x: auto; /* Горизонтальный скролл */
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 8px;
+}
+
+table {
+  min-width: 800px; /* Расширяем таблицу */
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid #ccc;
+  text-align: left;
+}
+
+thead {
+  position: sticky;
+  top: 0;
+  background: #ddd;
+  z-index: 2;
+}
+</style>
+<style>
+#customAlert {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2196f3;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  display: none;
+  text-align: center;
+}
+
+#customAlert.show {
+  display: block;
+}
+</style>
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Смены">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-icon-180x180.png">
+<link rel="icon" type="image/png" sizes="192x192"  href="icons/android-icon-192x192.png">
+</head>
+<body>
+  <header>
+    <h1>График смен</h1>
+  </header>
+  <main>
+
+    <!-- 1) Карточка: добавление смен -->
+    <div class="card">
+      <h2>Добавить смену</h2>
+      <form id="shiftForm">
+        <label>
+          Название:
+          <input type="text" id="name" placeholder="Ночь или День" />
+        </label>
+        <label>
+          Дата:
+          <input type="date" id="date" required />
+        </label>
+        <label>
+          Начало (время):
+          <input type="time" id="startTime" required />
+        </label>
+        <!-- Тип смены: день, ночь, праздник(день), праздник(ночь) -->
+        <label>
+          Тип смены:
+          <select id="shiftType">
+            <option value="day">День (12 ч.)</option>
+            <option value="night">Ночь (20 ч.)</option>
+            <option value="holidayDay">Праздник (день) 24 ч.</option>
+            <option value="holidayNight">Праздник (ночь) 24 ч.</option>
+          </select>
+        </label>
+        <!-- Напоминание (необязательно) -->
+        <label>
+          Напоминание (мин. до начала):
+          <input type="number" id="remindBefore" value="30" min="0" />
+        </label>
+
+        <button type="submit">Добавить смену</button>
+      </form>
+    </div>
+<!-- Календарь) -->
+	<div id="calendar"></div>
+<div class="calendar"></div>
+     <!-- 2) Таблица смен -->
+<div class="card" id="shiftCard">
+  <h2 class="clickable">📅 Список смен</h2>
+  <div id="shiftTableContainer" class="hidden">
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Имя</th>
+            <th>Дата</th>
+            <th>Начало</th>
+            <th>Тип смены</th>
+            <th>Напоминание</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="shiftsBody">
+          <!-- Динамически -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+ <!-- Статистика за текущий месяц -->
+     <div class="card">
+  <h2>Статистика за текущий месяц</h2>
+  
+  <div class="stats-bar">
+    <span class="stats-label">Смены:</span>
+    <div class="stats-bar-container">
+      <div id="barShifts" class="stats-bar-fill bar-shifts"></div>
+    </div>
+    <span id="statsCount"></span>
+  </div>
+  
+  <div class="stats-bar">
+    <span class="stats-label">Часы:</span>
+    <div class="stats-bar-container">
+      <div id="barHours" class="stats-bar-fill bar-hours"></div>
+    </div>
+    <span id="statsHours"></span>
+  </div>
+
+</div>
+<!-- Кнопка импорта -->
+<div class="card">
+  <h2>Импорт графика</h2>
+  <div class="input-group">
+  <label for="uploadSchedule">Выберите файл:</label>
+  <input type="file" id="uploadSchedule" accept=".ods" />
+</div>
+
+    <div class="input-group">
+  <label for="employeeSelect">Выберите сотрудника:</label>
+  <select id="employeeSelect"></select>
+</div>
+
+    <button type="button" id="importShifts" class="btn-import">Импортировать</button>
+  </form>
+</div>
+
+    <!-- Карточка расчёта зарплаты -->
+<div class="card">
+  <h2>Рассчитать зарплату</h2>
+  <form id="salaryForm">
+    <label for="hourlyRate">Оклад/тариф (руб/час):</label>
+    <input type="number" id="hourlyRate" step="0.01" min="0" required />
+
+    <button type="submit" class="btn-salary">Рассчитать</button>
+  </form>
+</div>
+      <!-- Результат -->
+      <div id="salaryResult">
+        <p><strong>Итоговая зарплата (после НДФЛ): <span id="finalSalary">0</span> руб.</strong></p>
+        <p>Детализация:</p>
+        <ul>
+          <li>Дневные (сумм.часы): <span id="rDayHours"></span> × ставка = <span id="rDayPay"></span> руб.</li>
+          <li>Ночные (сумм.часы): <span id="rNightHours"></span> × ставка = <span id="rNightPay"></span> руб.</li>
+          <li>Праздник (день) (сумм.часы): <span id="rHolDayHours"></span> × ставка = <span id="rHolDayPay"></span> руб.</li>
+          <li>Праздник (ночь) (сумм.часы): <span id="rHolNightHours"></span> × ставка = <span id="rHolNightPay"></span> руб.</li>
+          <li>Премия: <span id="rBonus"></span> руб.</li>
+          <li>До НДФЛ: <span id="rGross"></span> руб.</li>
+          <li>НДФЛ (13%): <span id="rNdfl"></span> руб.</li>
+        </ul>
+      </div>
+    </div>
+	<!-- Скачать смены -->
+<div class="card">
+  <h2>Сохранить смены</h2>
+  <button class="btn btn-share" id="downloadShifts">📥 Скачать файл</button>
+</div>
+    <!-- Модальное окно для редактирования -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal" id="editModal">
+        <button class="close-modal" id="closeModalBtn">&times;</button>
+        <h2>Редактировать смену</h2>
+        <form id="editForm">
+          <label>
+            Имя:
+            <input type="text" id="editName" />
+          </label>
+          <label>
+            Дата:
+            <input type="date" id="editDate" required />
+          </label>
+          <label>
+            Начало (время):
+            <input type="time" id="editStartTime" required />
+          </label>
+          <label>
+            Тип смены:
+            <select id="editShiftType">
+              <option value="day">День (12 ч.)</option>
+              <option value="night">Ночь (20 ч.)</option>
+              <option value="holidayDay">Праздник (день) 24 ч.</option>
+              <option value="holidayNight">Праздник (ночь) 24 ч.</option>
+            </select>
+          </label>
+          <label>
+            Напоминание (мин. до начала):
+            <input type="number" id="editRemindBefore" value="30" min="0" />
+          </label>
+          <button type="submit">Сохранить</button>
+        </form>
+      </div>
+    </div>
+
+  <script>
+   
+  
+ // Хранилище смен
+    let shifts = [];
+    let currentEditId = null
+
+    // Ссылки на элементы
+    const shiftsBody = document.getElementById('shiftsBody');
+    const shiftForm = document.getElementById('shiftForm');
+    const salaryForm = document.getElementById('salaryForm');
+    const salaryResult = document.getElementById('salaryResult');
+
+    // Модальное редактирование
+    const modalOverlay = document.getElementById('modalOverlay');
+    const editModal = document.getElementById('editModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const editForm = document.getElementById('editForm');
+
+    // Поля редактирования
+    const editName = document.getElementById('editName');
+    const editDate = document.getElementById('editDate');
+    const editStartTime = document.getElementById('editStartTime');
+    const editShiftType = document.getElementById('editShiftType');
+    const editRemindBefore = document.getElementById('editRemindBefore');
+
+    document.addEventListener("DOMContentLoaded", () => {
+      console.log();
+      loadShifts();
+      renderShiftsTable();
+      highlightShiftsInCalendar(); // Вызываем после загрузки смен
+       // Обработчики оффлайн/онлайн состояния
+  window.addEventListener("offline", () => {
+      alert("⚠️ Вы оффлайн! Используются сохраненные данные.");
+  });
+
+  window.addEventListener("online", () => {
+      alert("✅ Интернет восстановлен! Данные могут обновиться.");
+  });
+});
+
+ 
+    
+function saveShiftsToLocalStorage() {
+    // Сохраняем смены в локальное хранилище
+    localStorage.setItem("shifts", JSON.stringify(shifts));
+    // Обновляем интерфейс (перерисовываем таблицу смен)
+    renderShiftsTable();
+    document.getElementById('shiftForm').reset();
+    
+}
+    // Для удобства: сколько часов в каждом типе смены
+    function computeHours(shiftType) {
+      switch (shiftType) {
+        case 'day': return 12;
+        case 'night': return 20;
+        case 'holidayDay': return 24;   // день ×2
+        case 'holidayNight': return 24; // ночь ×2
+      }
+      return 0;
+    }
+
+    // Добавление смены
+    shiftForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const nameVal = document.getElementById('name').value.trim();
+      const dateVal = document.getElementById('date').value;
+      const startTimeVal = document.getElementById('startTime').value;
+      const shiftTypeVal = document.getElementById('shiftType').value;
+      const remindBeforeVal = parseInt(document.getElementById('remindBefore').value, 10) || 0;
+
+      if (!dateVal || !startTimeVal || !shiftTypeVal) {
+        alert('Заполните дату, время и тип смены!');
+        return;
+      }
+
+      const newShift = {
+        id: Date.now(),
+        name: nameVal,
+        date: dateVal,
+        startTime: startTimeVal,
+        shiftType: shiftTypeVal,
+        remindBefore: remindBeforeVal,
+        isDone: false
+      };
+
+      shifts.push(newShift);
+      saveShiftsToLocalStorage();
+      updateShiftsOnGitHub(shifts); // ✅ Добавляем отправку на GitHub
+      renderShiftsTable();
+      shiftForm.reset();
+    });
+
+   function updateMonthStats() {
+  console.log("Функция updateMonthStats вызвана!");
+
+  const statsCountEl = document.getElementById('statsCount');
+  const statsHoursEl = document.getElementById('statsHours');
+
+  if (!statsCountEl || !statsHoursEl) {
+    console.error("❌ Ошибка: Элементы statsCount или statsHours не найдены!");
+    return;
+  }
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  let count = 0;
+  let totalHours = 0;
+
+  shifts.forEach(shift => {
+    const d = new Date(shift.date + "T00:00:00");
+    if (d.getFullYear() === currentYear && d.getMonth() === currentMonth) {
+      count++;
+      totalHours += computeHours(shift.shiftType);
+    }
+  });
+
+  statsCountEl.textContent = count;
+  statsHoursEl.textContent = totalHours;
+
+  // --- Обновляем полоски ---
+  const barShifts = document.getElementById('barShifts');
+  const barHours = document.getElementById('barHours');
+
+  if (barShifts && barHours) {
+    console.log("Обновляем график...");
+
+    const maxShifts = Math.max(20, count);
+    const maxHours = Math.max(200, totalHours);
+
+    barShifts.style.width = (count / maxShifts) * 100 + '%';
+    barHours.style.width = (totalHours / maxHours) * 100 + '%';
+
+    barShifts.textContent = count;
+    barHours.textContent = totalHours;
+  } else {
+    console.warn("⚠️ Элементы для графика не найдены!");
+  }
+}
+	function renderShiftsTable() {
+      shiftsBody.innerHTML = '';
+      shifts.forEach(shift => {
+        const tr = document.createElement('tr');
+        if (shift.isDone) {
+          tr.classList.add('done-row');
+        }
+        tr.innerHTML = `
+          <td>${shift.name || ''}</td>
+          <td>${formatDate(shift.date)}</td>
+          <td>${shift.startTime}</td>
+          <td>${displayShiftType(shift.shiftType)}</td>
+          <td>${shift.remindBefore} мин.</td>
+          <td>
+            <button class="btn done" data-id="${shift.id}">✔</button>
+            <button class="btn edit" data-id="${shift.id}">Ред.</button>
+            <button class="btn delete" data-id="${shift.id}">Уд.</button>
+          </td>
+        `;
+		shiftsBody.appendChild(tr);
+		updateMonthStats();
+      });
+
+      document.querySelectorAll('.btn.done').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = parseInt(e.target.dataset.id, 10);
+          toggleDone(id);
+        });
+      });
+      document.querySelectorAll('.btn.edit').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = parseInt(e.target.dataset.id, 10);
+          openEditModal(id);
+        });
+      });
+      document.querySelectorAll('.btn.delete').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const id = parseInt(e.target.dataset.id, 10);
+          deleteShift(id);
+        });
+      });
+    }
+
+    // Удалить смену
+    function deleteShift(id) {
+      shifts = shifts.filter(s => s.id !== id);
+      saveShiftsToLocalStorage();
+      renderShiftsTable();
+    }
+
+    // Отработано
+    function toggleDone(id) {
+      const sh = shifts.find(s => s.id === id);
+      if (!sh) return;
+      sh.isDone = !sh.isDone;
+      saveShiftsToLocalStorage();
+      renderShiftsTable();
+    }
+
+    // Формат типа смены для отображения
+    function displayShiftType(st) {
+      switch (st) {
+        case 'day': return 'День (12 ч.)';
+        case 'night': return 'Ночь (20 ч.)';
+        case 'holidayDay': return 'Праздн.день (24 ч.)';
+        case 'holidayNight': return 'Праздн.ночь (24 ч.)';
+      }
+      return st;
+    }
+
+    // Формат даты (2024-02-12 -> 12.02.2024)
+    function formatDate(isoDate) {
+      const [y,m,d] = isoDate.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
+    // Открыть редактирование
+    function openEditModal(id) {
+      currentEditId = id;
+      const shift = shifts.find(s => s.id === id);
+      if (!shift) return;
+
+      editName.value = shift.name;
+      editDate.value = shift.date;
+      editStartTime.value = shift.startTime;
+      editShiftType.value = shift.shiftType;
+      editRemindBefore.value = shift.remindBefore || 0;
+
+      modalOverlay.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modalOverlay.style.display = 'none';
+    }
+    closeModalBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', e => {
+      if (e.target === modalOverlay) {
+        closeModal();
+      }
+    });
+
+    // Сохранить изменения
+    editForm.addEventListener('submit', e => {
+      e.preventDefault();
+      if (!currentEditId) return;
+
+      const idx = shifts.findIndex(s => s.id === currentEditId);
+      if (idx === -1) return;
+
+      shifts[idx].name = editName.value.trim();
+      shifts[idx].date = editDate.value;
+      shifts[idx].startTime = editStartTime.value;
+      shifts[idx].shiftType = editShiftType.value;
+      shifts[idx].remindBefore = parseInt(editRemindBefore.value, 10) || 0;
+
+      saveShiftsToLocalStorage();
+      renderShiftsTable();
+      closeModal();
+    });
+
+    // 4) Расчёт зарплаты
+    salaryForm.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+      if (isNaN(hourlyRate) || hourlyRate <= 0) {
+        alert('Укажите корректную часовую ставку');
+        return;
+      }
+
+      // 4.1 Суммируем часы по типам
+      let sumDayHours = 0, sumNightHours = 0, sumHolDayHours = 0, sumHolNightHours = 0;
+      // Считаем, сколько «смен» всего (для премии)
+      // (каждая запись в shifts = 1 смена)
+      let totalShiftsCount = shifts.length;
+
+      shifts.forEach(shift => {
+        const h = computeHours(shift.shiftType);
+        if (shift.shiftType === 'day') sumDayHours += h;
+        else if (shift.shiftType === 'night') sumNightHours += h;
+        else if (shift.shiftType === 'holidayDay') sumHolDayHours += h;
+        else if (shift.shiftType === 'holidayNight') sumHolNightHours += h;
+      });
+
+      // 4.2 Считаем оплату (без надбавок) = (дневные + ночные + праздничные) * hourlyRate
+      const dayPay = sumDayHours * hourlyRate;
+      const nightPay = sumNightHours * hourlyRate;
+      const holDayPay = sumHolDayHours * hourlyRate;
+      const holNightPay = sumHolNightHours * hourlyRate;
+      let total = dayPay + nightPay + holDayPay + holNightPay;
+
+      // 4.3 Надбавки:
+      // Районный коэффициент +15%
+      total *= 1.15;
+      // КТУ +30%
+      total *= 1.30;
+      // Вредность +4%
+      total *= 1.04;
+
+      // 4.4 Премия от кол-ва смен (14 =>2000, 19 =>4000, 20 =>6000)
+      let bonus = 0;
+      if (totalShiftsCount >= 20) bonus = 6000;
+      else if (totalShiftsCount >= 19) bonus = 4000;
+      else if (totalShiftsCount >= 14) bonus = 2000;
+      total += bonus;
+
+      // 4.5 НДФЛ (13%)
+      const ndfl = total * 0.13;
+      const final = total - ndfl;
+
+      // Выводим результаты
+      document.getElementById('rDayHours').textContent = sumDayHours;
+      document.getElementById('rNightHours').textContent = sumNightHours;
+      document.getElementById('rHolDayHours').textContent = sumHolDayHours;
+      document.getElementById('rHolNightHours').textContent = sumHolNightHours;
+
+      document.getElementById('rDayPay').textContent = dayPay.toFixed(2);
+      document.getElementById('rNightPay').textContent = nightPay.toFixed(2);
+      document.getElementById('rHolDayPay').textContent = holDayPay.toFixed(2);
+      document.getElementById('rHolNightPay').textContent = holNightPay.toFixed(2);
+
+      document.getElementById('rBonus').textContent = bonus.toFixed(2);
+      document.getElementById('rGross').textContent = total.toFixed(2);
+      document.getElementById('rNdfl').textContent = ndfl.toFixed(2);
+      document.getElementById('finalSalary').textContent = final.toFixed(2);
+
+      salaryResult.style.display = 'block';
+    });
+  </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+  const shiftCard = document.getElementById("shiftCard");
+  const shiftTableContainer = document.getElementById("shiftTableContainer");
+
+  if (!shiftCard || !shiftTableContainer) {
+    console.error("❌ Ошибка: Контейнер смен не найден.");
+    return;
+  }
+
+  shiftCard.addEventListener("click", () => {
+    shiftTableContainer.classList.toggle("open");
+  });
+});
+</script>
+  </main>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Service Worker зарегистрирован!'))
+      .catch(error => console.error('Ошибка Service Worker:', error));
+  }
+</script>
+<script>
+if ("Notification" in window) {
+  Notification.requestPermission().then(permission => {
+    if (permission === "granted") {
+      console.log("Уведомления разрешены");
+    } else {
+      console.log("Уведомления запрещены");
+    }
+  });
+}
+</script>
+
+<script>
+//check the console for date click event
+//Fixed day highlight
+//Added previous month and next month view
+/* Russian (UTF-8) initialisation for the jQuery UI date picker plugin. */
+/* Written by Andrew Stromnov (stromnov@gmail.com). */
+
+function CalendarControl() {
+    const calendar = new Date();
+    const calendarControl = {
+      localDate: new Date(),
+      prevMonthLastDate: null,
+      calWeekDays: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+      calMonthName: [
+        "Янв",
+        "Фев",
+        "Мар",
+        "Апр",
+        "Май",
+        "Июн",
+        "Июл",
+        "Авг",
+        "Сен",
+        "Окт",
+        "Ноя",
+        "Дек"
+      ],
+      daysInMonth: function (month, year) {
+        return new Date(year, month, 0).getDate();
+      },
+      firstDay: function () {
+        return new Date(calendar.getFullYear(), calendar.getMonth(), 1);
+      },
+      lastDay: function () {
+        return new Date(calendar.getFullYear(), calendar.getMonth() + 1, 0);
+      },
+    
+     firstDayNumber: function () {
+        return calendarControl.firstDay().getDay() + 0;
+     },
+     
+      lastDayNumber: function () {
+        return calendarControl.lastDay().getDay() + 1;
+      },
+      getPreviousMonthLastDate: function () {
+        let lastDate = new Date(
+          calendar.getFullYear(),
+          calendar.getMonth(),
+          0
+        ).getDate();
+        return lastDate;
+      },
+      navigateToPreviousMonth: function () {
+        calendar.setMonth(calendar.getMonth() - 1);
+		highlightShiftsInCalendar();
+        calendarControl.attachEventsOnNextPrev();
+      },
+      navigateToNextMonth: function () {
+        calendar.setMonth(calendar.getMonth() + 1);
+		
+        calendarControl.attachEventsOnNextPrev();
+      },
+      navigateToCurrentMonth: function () {
+        let currentMonth = calendarControl.localDate.getMonth();
+        let currentYear = calendarControl.localDate.getFullYear();
+        calendar.setMonth(currentMonth);
+        calendar.setYear(currentYear);
+		
+        calendarControl.attachEventsOnNextPrev();
+      },
+      displayYear: function () {
+        let yearLabel = document.querySelector(".calendar .calendar-year-label");
+        yearLabel.innerHTML = calendar.getFullYear();
+      },
+      displayMonth: function () {
+        let monthLabel = document.querySelector(
+          ".calendar .calendar-month-label"
+        );
+        monthLabel.innerHTML = calendarControl.calMonthName[calendar.getMonth()];
+      },
+      selectDate: function (e) {
+        console.log(
+          `${e.target.textContent} ${
+            calendarControl.calMonthName[calendar.getMonth()]
+          } ${calendar.getFullYear()} года`
+        );
+      },
+      plotSelectors: function () {
+        document.querySelector(
+          ".calendar"
+        ).innerHTML += `<div class="calendar-inner"><div class="calendar-controls">
+          <div class="calendar-prev"><a href="#"><svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><path fill="#666" d="M88.2 3.8L35.8 56.23 28 64l7.8 7.78 52.4 52.4 9.78-7.76L45.58 64l52.4-52.4z"/></svg></a></div>
+          <div class="calendar-year-month">
+          <div class="calendar-month-label"></div>
+          <div>-</div>
+          <div class="calendar-year-label"></div>
+          </div>
+          <div class="calendar-next"><a href="#"><svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><path fill="#666" d="M38.8 124.2l52.4-52.42L99 64l-7.77-7.78-52.4-52.4-9.8 7.77L81.44 64 29 116.42z"/></svg></a></div>
+          </div>
+          <div class="calendar-today-date">Сегодня: 
+            ${calendarControl.calWeekDays[calendarControl.localDate.getDay()]}, 
+            ${calendarControl.localDate.getDate()}, 
+            ${calendarControl.calMonthName[calendarControl.localDate.getMonth()]} 
+            ${calendarControl.localDate.getFullYear()}
+          </div>
+          <div class="calendar-body"></div></div>`;
+      },
+      plotDayNames: function () {
+        for (let i = 0; i < calendarControl.calWeekDays.length; i++) {
+          document.querySelector(
+            ".calendar .calendar-body"
+          ).innerHTML += `<div>${calendarControl.calWeekDays[i]}</div>`;
+        }
+      },
+      plotDates: function () {
+        document.querySelector(".calendar .calendar-body").innerHTML = "";
+        calendarControl.plotDayNames();
+        calendarControl.displayMonth();
+        calendarControl.displayYear();
+        let count = 1;
+        let prevDateCount = 0;
+  
+        calendarControl.prevMonthLastDate = calendarControl.getPreviousMonthLastDate();
+        let prevMonthDatesArray = [];
+        let calendarDays = calendarControl.daysInMonth(
+          calendar.getMonth() + 1,
+          calendar.getFullYear()
+        );
+        // dates of current month
+        for (let i = 1; i < calendarDays; i++) {
+          if (i < calendarControl.firstDayNumber()) {
+            prevDateCount += 1;
+            document.querySelector(
+              ".calendar .calendar-body"
+            ).innerHTML += `<div class="prev-dates"></div>`;
+            prevMonthDatesArray.push(calendarControl.prevMonthLastDate--);
+          } else {
+            document.querySelector(
+              ".calendar .calendar-body"
+            ).innerHTML += `<div class="number-item" data-num=${count}><a class="dateNumber" href="#">${count++}</a></div>`;
+          }
+        }
+        //remaining dates after month dates
+        for (let j = 0; j < prevDateCount + 1; j++) {
+          document.querySelector(
+            ".calendar .calendar-body"
+          ).innerHTML += `<div class="number-item" data-num=${count}><a class="dateNumber" href="#">${count++}</a></div>`;
+        }
+        calendarControl.highlightToday();
+        calendarControl.plotPrevMonthDates(prevMonthDatesArray);
+        calendarControl.plotNextMonthDates();
+      },
+      attachEvents: function () {
+        let prevBtn = document.querySelector(".calendar .calendar-prev a");
+        let nextBtn = document.querySelector(".calendar .calendar-next a");
+        let todayDate = document.querySelector(".calendar .calendar-today-date");
+        let dateNumber = document.querySelectorAll(".calendar .dateNumber");
+        prevBtn.addEventListener(
+          "click",
+          calendarControl.navigateToPreviousMonth
+        );
+        nextBtn.addEventListener("click", calendarControl.navigateToNextMonth);
+        todayDate.addEventListener(
+          "click",
+          calendarControl.navigateToCurrentMonth
+        );
+        for (var i = 0; i < dateNumber.length; i++) {
+            dateNumber[i].addEventListener(
+              "click",
+              calendarControl.selectDate,
+              false
+            );
+        }
+      },
+      highlightToday: function () {
+        let currentMonth = calendarControl.localDate.getMonth() + 1;
+        let changedMonth = calendar.getMonth() + 1;
+        let currentYear = calendarControl.localDate.getFullYear();
+        let changedYear = calendar.getFullYear();
+        if (
+          currentYear === changedYear &&
+          currentMonth === changedMonth &&
+          document.querySelectorAll(".number-item")
+        ) {
+          document
+            .querySelectorAll(".number-item")
+            [calendar.getDate() - 1].classList.add("calendar-today");
+        }
+      },
+      plotPrevMonthDates: function(dates){
+        dates.reverse();
+        for(let i=0;i<dates.length;i++) {
+            if(document.querySelectorAll(".prev-dates")) {
+                document.querySelectorAll(".prev-dates")[i].textContent = dates[i];
+            }
+        }
+      },
+      plotNextMonthDates: function(){
+       let childElemCount = document.querySelector('.calendar-body').childElementCount;
+       //7 lines
+       if(childElemCount > 42 ) {
+           let diff = 49 - childElemCount;
+           calendarControl.loopThroughNextDays(diff);
+       }
+
+       //6 lines
+       if(childElemCount > 35 && childElemCount <= 42 ) {
+        let diff = 42 - childElemCount;
+        calendarControl.loopThroughNextDays(42 - childElemCount);
+       }
+
+      },
+      loopThroughNextDays: function(count) {
+        if(count > 0) {
+            for(let i=1;i<=count;i++) {
+                document.querySelector('.calendar-body').innerHTML += `<div class="next-dates">${i}</div>`;
+            }
+        }
+      },
+      attachEventsOnNextPrev: function () {
+        calendarControl.plotDates();
+        highlightShiftsInCalendar(); // Добавляем вызов после отрисовки дат
+        calendarControl.attachEvents();
+      },
+      init: function () {
+        calendarControl.plotSelectors();
+        calendarControl.plotDates();
+        calendarControl.attachEvents();
+        setTimeout(() => {
+        highlightShiftsInCalendar(); // ✅ Теперь смены загружаются сразу после загрузки страницы
+        }, 100);
+      }
+    };
+	
+function highlightShiftsInCalendar() {
+  // Используем уже загруженные смены (не вызываем loadShifts())
+  const dateElements = document.querySelectorAll('.calendar-body .number-item');
+
+  dateElements.forEach(el => {
+    const day = el.dataset.num.padStart(2, '0'); // Приводим к формату "01", "02"
+    const month = (calendar.getMonth() + 1).toString().padStart(2, '0');
+    const year = calendar.getFullYear();
+    const fullDate = `${year}-${month}-${day}`;
+
+    // Очищаем классы перед обновлением
+    el.classList.remove('shift-day', 'shift-night', 'shift-holiday-day', 'shift-holiday-night');
+
+    // Проверяем, есть ли смена на эту дату
+    const shift = shifts.find(s => s.date === fullDate);
+    if (shift) {
+      if (shift.shiftType === 'day') el.classList.add('shift-day');
+      if (shift.shiftType === 'night') el.classList.add('shift-night');
+      if (shift.shiftType === 'holidayDay') el.classList.add('shift-holiday-day');
+      if (shift.shiftType === 'holidayNight') el.classList.add('shift-holiday-night');
+    }
+  });
+}
+
+	
+    calendarControl.init();
+  }
+  
+  const calendarControl = new CalendarControl();
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+ // импорт смен
+   document.addEventListener("DOMContentLoaded", () => {
+  const fileInput = document.getElementById("uploadSchedule");
+  const employeeSelect = document.getElementById("employeeSelect");
+  const importButton = document.getElementById("importShifts");
+
+  let employees = []; // Список сотрудников
+  let scheduleData = {}; // Данные из ODS
+
+  // Функция для обновления списка сотрудников
+  function updateEmployeeSelect() {
+    employeeSelect.innerHTML = employees
+      .map(name => `<option value="${name}">${name}</option>`)
+      .join("");
+  }
+
+  // При загрузке ODS-файла
+  fileInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onload = function (e) {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+
+      // Читаем первый лист
+      const sheetName = workbook.SheetNames[0];
+      const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+
+      if (!sheet || sheet.length === 0) {
+        alert("Ошибка: пустой файл или неверный формат!");
+        return;
+      }
+
+      // ✅ Исправленный код для поиска сотрудников
+      employees = sheet
+        .map(row => row[0]?.trim())  // Убираем лишние пробелы
+        .filter(name => name && !name.startsWith("ФИО") && !name.startsWith("Кол-во линий")); // Убираем ненужные строки
+
+      console.log("Найденные сотрудники:", employees);
+
+      if (employees.length === 0) {
+        alert("Сотрудники не найдены в файле!");
+        return;
+      }
+
+      // Заполняем выпадающий список
+      updateEmployeeSelect();
+
+      // Сохраняем данные таблицы
+      scheduleData = sheet;
+      alert("Файл загружен! Выберите сотрудника и нажмите 'Импортировать'");
+    };
+  });
+
+  // Обработчик кнопки "Импортировать"
+  importButton.addEventListener("click", () => {
+    if (!scheduleData.length) {
+      alert("Сначала загрузите ODS-файл!");
+      return;
+    }
+
+    const selectedEmployee = employeeSelect.value;
+    if (!selectedEmployee) {
+      alert("Выберите сотрудника!");
+      return;
+    }
+
+    // Проверка, есть ли такой сотрудник в загруженных данных
+    const employeeRow = scheduleData.find(row => row[0] === selectedEmployee);
+    if (!employeeRow) {
+      alert("Не найдено данных для выбранного сотрудника.");
+      return;
+    }
+
+    // Парсим смены (ищем "Д" и "Н")
+    const newShifts = [];
+    const yearMonth = "2025-02"; // Текущий месяц (можно сделать динамическим)
+
+    for (let day = 1; day < employeeRow.length; day++) {
+      const shift = employeeRow[day];
+      if (shift === "Д" || shift === "Н") {
+        newShifts.push({
+          id: Date.now() + day,
+          name: shift === "Д" ? "День" : "Ночь",
+          date: `${yearMonth}-${String(day).padStart(2, "0")}`,
+          startTime: shift === "Д" ? "08:00" : "20:00",
+          shiftType: shift === "Д" ? "day" : "night",
+          remindBefore: 30,
+          isDone: false
+        });
+      }
+    }
+
+    if (!newShifts.length) {
+      alert("Смены не найдены!");
+      return;
+    }
+
+    // Добавляем смены к существующим
+    shifts = [...shifts, ...newShifts];
+    saveShiftsToLocalStorage();
+    renderShiftsTable();
+    highlightShiftsInCalendar();
+
+    alert("Смены импортированы!");
+  });
+});
+</script>
+<script>
+// 📌 Уведомления для iOS (iPhone)
+document.addEventListener("DOMContentLoaded", () => {
+    // 1️⃣ Запрашиваем разрешение на уведомления
+    if ("Notification" in window) {
+        if (Notification.permission === "default") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("✅ Уведомления разрешены!");
+                } else {
+                    console.warn("⚠️ Уведомления запрещены пользователем.");
+                }
+            });
+        }
+    }
+
+    checkShiftReminders(); // Запускаем проверку смен
+});
+
+function checkShiftReminders() {
+    loadShifts();
+    if (!shifts.length) return;
+
+    let now = new Date();
+    shifts.forEach(shift => {
+        let shiftDate = new Date(shift.date + "T" + shift.startTime);
+        let timeDiff = shiftDate - now;
+
+        if (timeDiff > 0 && timeDiff <= 1800000) { // Напоминание за 30 минут
+            new Notification("Напоминание о смене", {
+                body: `📅 Ваша смена (${shift.shiftType === "night" ? "Ночная" : "Дневная"}) скоро начнётся!`,
+                icon: "https://cdn-icons-png.flaticon.com/512/2983/2983767.png",
+                vibrate: [200, 100, 200]
+            });
+        }
+    });
+
+    // 3️⃣ Повторяем проверку каждые 10 минут (600000 мс) для экономии батареи
+    setTimeout(checkShiftReminders, 600000);
+}
+
+// ✅ Запуск проверки при возвращении на страницу (экономия батареи)
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        checkShiftReminders();
+    }
+});
+</script>
+<script src="script.js"></script>
+<script src="sync.js"></script>
+</body>
+</html>
