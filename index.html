@@ -893,7 +893,8 @@ function saveShiftsToLocalStorage() {
     renderShiftsTable();
     document.getElementById('shiftForm').reset();
     
-}const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
+}
+	  const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
 
 // 🔹 Сохранение смен в localStorage
 function saveShiftsLocally(shifts) {
@@ -994,10 +995,20 @@ window.addEventListener("online", async () => {
     localStorage.removeItem("shifts"); // Очищаем локальный кеш после синхронизации
     loadShifts(); // Перезагружаем данные
 });
-
 // 🔹 Запускаем загрузку смен при загрузке страницы
 document.addEventListener("DOMContentLoaded", loadShifts);
 
+	  // смены локалити
+    // Для удобства: сколько часов в каждом типе смены
+    function computeHours(shiftType) {
+      switch (shiftType) {
+        case 'day': return 12;
+        case 'night': return 20;
+        case 'holidayDay': return 24;   // день ×2
+        case 'holidayNight': return 24; // ночь ×2
+      }
+      return 0;
+    }
     // Добавление смены
     shiftForm.addEventListener('submit', e => {
       e.preventDefault();
