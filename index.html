@@ -672,6 +672,18 @@ thead {
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-icon-180x180.png">
 <link rel="icon" type="image/png" sizes="192x192"  href="icons/android-icon-192x192.png">
+ <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const tg = window.Telegram.WebApp;
+            tg.expand(); // Разворачивает Web App на весь экран
+            
+            document.getElementById("sendData").addEventListener("click", () => {
+                const data = { action: "getShifts" };
+                tg.sendData(JSON.stringify(data)); // Отправка данных боту
+            });
+        });
+    </script>
 </head>
 <body>
   <header>
