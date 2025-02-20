@@ -871,42 +871,46 @@ thead {
     const editRemindBefore = document.getElementById('editRemindBefore');
 
     document.addEventListener("DOMContentLoaded", () => {
-      console.log();
-      loadShifts();
-      renderShiftsTable();
-      highlightShiftsInCalendar(); // Вызываем после загрузки смен
-       // Обработчики оффлайн/онлайн состояния
-  window.addEventListener("offline", () => {
-      alert("⚠️ Вы оффлайн! Используются сохраненные данные.");
-  });
+    console.log("📥 DOM загружен, загружаем смены...");
+    loadShifts();
+    renderShiftsTable();
+    highlightShiftsInCalendar(); // Вызываем после загрузки смен
 
-  window.addEventListener("online", () => {
-      alert("✅ Интернет восстановлен! Данные могут обновиться.");
-  });
+    // Обработчики оффлайн/онлайн состояния
+    window.addEventListener("offline", () => {
+        alert("⚠️ Вы оффлайн! Используются сохраненные данные.");
+    });
+
+    window.addEventListener("online", () => {
+        alert("✅ Интернет восстановлен! Данные могут обновиться.");
+        loadShifts();
+    });
 });
 
  // смены сохранить
 function saveShiftsToLocalStorage() {
-    // Сохраняем смены в локальное хранилище
     localStorage.setItem("shifts", JSON.stringify(shifts));
-    // Обновляем интерфейс (перерисовываем таблицу смен)
     renderShiftsTable();
-    document.getElementById('shiftForm').reset();
-    
+
+    // 🔹 Добавляем смену на сервер
+    const lastShift = shifts[shifts.length - 1];
+    addShift(lastShift.date, lastShift.shiftType);
 }
 	  const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
 
 // 🔹 Загружаем смены с сервера
+// 🔹 Загружаем смены с сервера
 async function loadShifts() {
     try {
+        console.log("🌍 Загружаем смены с сервера...");
         const response = await fetch(API_URL);
-        const shifts = await response.json();
-        localStorage.setItem("shifts", JSON.stringify(shifts)); // 🔹 Сохраняем в localStorage
-        renderShifts(shifts);
+        shifts = await response.json(); // Обновляем `shifts`
+        localStorage.setItem("shifts", JSON.stringify(shifts)); // Сохраняем в localStorage
+        renderShiftsTable(); // Перерисовываем таблицу
     } catch (error) {
-        console.error("❌ Сервер недоступен, загружаем смены из localStorage.");
-        const localShifts = JSON.parse(localStorage.getItem("shifts")) || [];
-        renderShifts(localShifts);
+        console.error("❌ Сервер недоступен, загружаем смены из LocalStorage.");
+        shifts = JSON.parse(localStorage.getItem("shifts")) || [];
+        renderShiftsTable(); // Перерисовываем таблицу из локального хранилища
     }
 }
 
@@ -935,7 +939,11 @@ async function addShift(date, shiftType) {
 // 🔹 Удаляем смену
 async function deleteShift(shiftId) {
     try {
-        await fetch(`${API_URL}/${shiftId}`, { method: "DELETE" });
+        await fetch(API_URL, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: shiftId }),
+});
         console.log("✅ Смена удалена!");
         loadShifts();
     } catch (error) {
