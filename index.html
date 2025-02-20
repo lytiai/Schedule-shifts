@@ -843,10 +843,31 @@ thead {
         </form>
       </div>
     </div>
+<script>
+const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
 
+// 🔹 Загружаем смены с сервера
+async function loadShifts() {
+    try {
+        console.log("🌍 Загружаем смены с сервера...");
+        const response = await fetch(API_URL);
+        shifts = await response.json(); // Обновляем `shifts`
+        localStorage.setItem("shifts", JSON.stringify(shifts)); // Сохраняем в LocalStorage
+        renderShiftsTable(); // Перерисовываем таблицу
+    } catch (error) {
+        console.error("❌ Сервер недоступен, загружаем смены из LocalStorage.");
+        shifts = JSON.parse(localStorage.getItem("shifts")) || [];
+        renderShiftsTable(); // Перерисовываем таблицу из локального хранилища
+    }
+}
+
+// ✅ Теперь вызываем `loadShifts()` после её объявления
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("📥 DOM загружен, загружаем смены...");
+    loadShifts();
+});
+</script>
   <script>
-   
-  
  // Хранилище смен
     let shifts = [];
     let currentEditId = null
@@ -895,23 +916,6 @@ function saveShiftsToLocalStorage() {
     // 🔹 Добавляем смену на сервер
     const lastShift = shifts[shifts.length - 1];
     addShift(lastShift.date, lastShift.shiftType);
-}
-	  const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
-
-// 🔹 Загружаем смены с сервера
-// 🔹 Загружаем смены с сервера
-async function loadShifts() {
-    try {
-        console.log("🌍 Загружаем смены с сервера...");
-        const response = await fetch(API_URL);
-        shifts = await response.json(); // Обновляем `shifts`
-        localStorage.setItem("shifts", JSON.stringify(shifts)); // Сохраняем в localStorage
-        renderShiftsTable(); // Перерисовываем таблицу
-    } catch (error) {
-        console.error("❌ Сервер недоступен, загружаем смены из LocalStorage.");
-        shifts = JSON.parse(localStorage.getItem("shifts")) || [];
-        renderShiftsTable(); // Перерисовываем таблицу из локального хранилища
-    }
 }
 
 // 🔹 Добавляем смену
