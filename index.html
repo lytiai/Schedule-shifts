@@ -844,30 +844,6 @@ thead {
       </div>
     </div>
 <script>
-const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
-
-// 🔹 Загружаем смены с сервера
-async function loadShifts() {
-    try {
-        console.log("🌍 Загружаем смены с сервера...");
-        const response = await fetch(API_URL);
-        shifts = await response.json(); // Обновляем `shifts`
-        localStorage.setItem("shifts", JSON.stringify(shifts)); // Сохраняем в LocalStorage
-        renderShiftsTable(); // Перерисовываем таблицу
-    } catch (error) {
-        console.error("❌ Сервер недоступен, загружаем смены из LocalStorage.");
-        shifts = JSON.parse(localStorage.getItem("shifts")) || [];
-        renderShiftsTable(); // Перерисовываем таблицу из локального хранилища
-    }
-}
-
-// ✅ Теперь вызываем `loadShifts()` после её объявления
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("📥 DOM загружен, загружаем смены...");
-    loadShifts();
-});
-
-
  // Хранилище смен
     let shifts = [];
     let currentEditId = null
@@ -906,64 +882,63 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("✅ Интернет восстановлен! Данные могут обновиться.");
         loadShifts();
     });
+	    
+const API_URL = "https://shift-schedule-server-production.up.railway.app/api/shifts";
+let shifts = JSON.parse(localStorage.getItem("shifts")) || [];
+
+document.addEventListener("DOMContentLoaded", () => {
+    loadShifts(); // Загружаем смены с сервера или из локального хранилища
 });
 
- // смены сохранить
+// 🟢 Добавление смены
+document.getElementById("shiftForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const date = document.getElementById("date").value;
+    const shiftType = document.getElementById("shiftType").value;
+
+    if (!date || !shiftType) {
+        alert("Заполните все поля!");
+        return;
+    }
+
+    const newShift = { id: Date.now(), date, shift: shiftType };
+    shifts.push(newShift);
+    saveShiftsToLocalStorage();
+    renderShiftsTable();
+    syncShiftsToServer();
+
+    this.reset();
+});
+
+// 🟢 Сохранение в localStorage
 function saveShiftsToLocalStorage() {
     localStorage.setItem("shifts", JSON.stringify(shifts));
-    renderShiftsTable();
-
-    // 🔹 Добавляем смену на сервер
-    const lastShift = shifts[shifts.length - 1];
-    addShift(lastShift.date, lastShift.shiftType);
 }
 
-// 🔹 Добавляем смену
-async function addShift(date, shiftType) {
-    const newShift = { date, shift: shiftType };
-
+// 🟢 Загрузка смен с сервера
+async function loadShifts() {
     try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newShift),
-        });
-
-        if (response.ok) {
-            console.log("✅ Смена добавлена!");
-            loadShifts();
-        } else {
-            console.error("❌ Ошибка при добавлении смены:", await response.text());
-        }
+        const response = await fetch(API_URL);
+        const serverShifts = await response.json();
+        shifts = serverShifts;
+        saveShiftsToLocalStorage();
+        renderShiftsTable();
     } catch (error) {
-        console.error("❌ Сервер недоступен:", error);
+        console.warn("❌ Сервер недоступен, загружаем смены из localStorage");
+        shifts = JSON.parse(localStorage.getItem("shifts")) || [];
+        renderShiftsTable();
     }
 }
 
-// 🔹 Удаляем смену
-async function deleteShift(shiftId) {
-    try {
-        await fetch(API_URL, {
-    method: "DELETE",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: shiftId }),
-});
-        console.log("✅ Смена удалена!");
-        loadShifts();
-    } catch (error) {
-        console.error("❌ Ошибка при удалении смены:", error);
+// 🟢 Отправка смен на сервер
+async function syncShiftsToServer() {
+    if (!navigator.onLine) {
+        console.warn("⚠️ Офлайн! Смена сохранена локально.");
+        return;
     }
-}
 
-// ✅ Загружаем смены при запуске сайта
-
-
-// 🔹 Синхронизация при подключении к интернету
-window.addEventListener("online", async () => {
-    console.log("🌍 Онлайн! Синхронизируем данные...");
-    let localShifts = loadShiftsFromLocalStorage();
-
-    for (const shift of localShifts) {
+    for (const shift of shifts) {
         try {
             await fetch(API_URL, {
                 method: "POST",
@@ -971,17 +946,49 @@ window.addEventListener("online", async () => {
                 body: JSON.stringify(shift),
             });
         } catch (error) {
-            console.error("❌ Ошибка при синхронизации:", error);
+            console.error("❌ Ошибка синхронизации:", error);
         }
     }
-    
-    localStorage.removeItem("shifts"); // Очищаем локальный кеш после синхронизации
-    loadShifts(); // Перезагружаем данные
-});
-// 🔹 Запускаем загрузку смен при загрузке страницы
 
+    console.log("✅ Все смены отправлены на сервер.");
+    loadShifts();
+}
 
-	  // смены локалити
+// 🟢 Отображение смен в таблице
+function renderShiftsTable() {
+    const shiftsBody = document.getElementById("shiftsBody");
+    shiftsBody.innerHTML = "";
+
+    shifts.forEach((shift) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${shift.date}</td>
+            <td>${shift.shift}</td>
+            <td>
+                <button onclick="deleteShift(${shift.id})">❌ Удалить</button>
+            </td>
+        `;
+        shiftsBody.appendChild(tr);
+    });
+}
+
+// 🟢 Удаление смены
+async function deleteShift(id) {
+    shifts = shifts.filter(shift => shift.id !== id);
+    saveShiftsToLocalStorage();
+    renderShiftsTable();
+
+    try {
+        await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+        console.log("✅ Смена удалена с сервера");
+    } catch (error) {
+        console.error("❌ Ошибка удаления с сервера:", error);
+    }
+}
+
+// 🟢 Синхронизация при появлении интернета
+window.addEventListener("online", syncShiftsToServer);
+ 
     // Для удобства: сколько часов в каждом типе смены
     function computeHours(shiftType) {
       switch (shiftType) {
