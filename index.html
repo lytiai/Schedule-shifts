@@ -1034,10 +1034,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Удалить смену
     function deleteShift(id) {
-      shifts = shifts.filter(s => s.id !== id);
-      saveShiftsToLocalStorage();
-      renderShiftsTable();
+    const shiftToDelete = shifts.find(s => s.id === id);
+    if (!shiftToDelete) {
+        console.error("❌ Ошибка: смена не найдена!");
+        return;
     }
+
+    // 🔥 Удаляем смену из локального хранилища
+    shifts = shifts.filter(s => s.id !== id);
+    saveShiftsToLocalStorage();
+    renderShiftsTable();
+
+    // 🔥 Отправляем запрос на удаление смены на сервере
+    fetch(`https://shift-schedule-server-production.up.railway.app/api/shifts/${shiftToDelete.date}/${shiftToDelete.shiftType}`, { // ⚠️ Укажи свой сервер
+        method: "DELETE",
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("✅ Смена удалена с сервера:", data);
+    })
+    .catch(error => {
+        console.error("❌ Ошибка удаления смены на сервере:", error);
+    });
+}
 
     // Отработано
     function toggleDone(id) {
